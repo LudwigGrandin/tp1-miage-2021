@@ -49,7 +49,7 @@ public class TodoItem {
 
 	@Override
 	public String toString() {
-		return "TodoItem [id=" + id + ", time=" + time + ", content=" + content + "]";
+		return "TodoItem [id=" + this.id + ", time=" + this.time + ", content=" + this.content + "]";
 	}
 
 	@Override

@@ -28,5 +28,7 @@ public class GetTodoItemsService implements GetTodoItems {
 				.map(item -> new TodoItem(item.getId(), item.getTime(), item.finalContent()))
 				.collect(Collectors.toList());
 	}
-
+	
 }
+
+

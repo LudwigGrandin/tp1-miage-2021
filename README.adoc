@@ -5,9 +5,9 @@ NOTE: TP de deux slots de 1h20
 ## Nom du(des) étudiant(e)(s) de ce monôme/binôme 
 WARNING: NE PAS OUBLIER DE MENTIONNER LES DEUX NOMS SI VOUS ETES EN BINOME!
 
-#XXX# (et #YYY#)
+Emma Bretaud et Ludwig Grandin en binome
 
-Commentaires éventuels des étudiants : #XXXXXX#
+Commentaires éventuels des étudiants : 
 
 ## Pré-requis 
 
@@ -27,7 +27,7 @@ TIP: Fermer chaque projet Eclipse (sans supprimer les sources) avant de passer �
 
 ### Exercice 1 - Etudier une API REST sans couches
 _Temps estimé : 40 mins_
-
+ 
 * Importer dans Eclipse les projets `todolist-debut-ex1` et `todolist-debut-ex2`.
 
 Faire `File` -> `Import` -> `Projects from Git (with smart import)` -> `Clone URI` -> URI: `https://github.com/<x>/tp1-miage-2021.git` (conserver les autres options inchangées) -> 'Import projects from File System or Archives' : ne laisser cocher que `tp1-miage-2021/tolist-debut-ex1` et `tp1-miage-2021/tolist-debut-ex2` ('import as Maven') -> Bouton 'Finish'.
@@ -39,9 +39,18 @@ TIP: [Rappel Git] Trois dépôts sont ici utilisés: le dépot Github de l'ensei
 
 *Le code est-il structuré en couches ? Quel problèmes ce code peut-il poser ?*
 
+Il existe 4 couches (les plus communes) : Présentation / Service / Domaine / Infrastructure
+
+Dans ce code il n'y a pas de couche. Si il y avait des couches le code fonctionnerait avec des packages.
+
 *Où se trouve le code métier (voir la règle de gestion RG 1) ?*
 
+Il se trouve dans la couche Domaine, ici il se trouve dans le fichier TodolistController.java.
+Ce n'est pas une bonne idée de le mettre dans le Controller.
+
 *Cette règle est-elle facilement testable par un test unitaire ?*
+
+Non car la méthode est privée. Si elle était publique ca serait plus facile.
 
 * Lancer une base PostgreSQL en Docker dans un terminal (on lance ici la base en mode interactif pour visualiser son activité. Pour la lancer en tâche de fond, remplacer les options `it` par `d` comme 'daemon'):
 ```bash
@@ -49,14 +58,29 @@ docker run -it -e POSTGRES_PASSWORD=password -p 5432:5432 postgres
 ```
 *Expliquer cette ligne de commande (y compris les options utilisées)*
 
+run  c'est pour lancer docker 
+-it renvoie le nom du fichier executé 
+-e met en place une variable d'environnement 
+POSTGRES_PASSWORD=password c'est la valeur du paramètre postgres_password pour l'image docker postgres
+-p 5432:5432 les numeros de port publique et privé du conteneur  
+postgres le nom de l'application pour laquelle il faut créer un conteneur 
+
 * Compléter le code manquant dans la méthode `TodoListController.createTodoItem()`
 
 *Pourquoi `todoItemRepository` est-il `null` ? Quelle est la meilleure façon de l'injecter ?*
+
+Il faut metter en place l'injection de dépendance. 
+
+Nous avons utilisé Insomnia pour tester et savoir si il injecter bien les données json. 
+Nous avons pris l'URI que renvoie le controller pour vérifier. 
 
 * Modifier le code en conséquence.
 
 * Tester vos endpoints avec un client REST.
 
+On a eu la réponse 201 Created et on voit dans la console Java qu'un "insert into" apparait avec les 3 valeurs. 
+Nous avons fait le test en injectant les 3 valeurs avec le même identifiant (id) et il a remplacé dans la console "insert into" par "update". 
+Cela nous indique qu'il lit bien les données car il arrive à faire la différence entre un update et un insert.
 
 [NOTE]
 ====
@@ -94,10 +118,38 @@ Source : http://leanpub.com/get-your-hands-dirty-on-clean-architecture[Tom Hombe
 
 *Rappeler en quelques lignes les grands principes de l'architecture hexagonale.*
 
+Les grands principes de l'architecture hexagonale sont : 
+- Séparer le User-Side, Server-Side et les règles Métier.
+- Ils sont séparés par des Adapters et des Ports 
+- Les dépendances vont vers le noyau donc vers le Métier.
+
+Site de référence : https://blog.octo.com/architecture-hexagonale-trois-principes-et-un-exemple-dimplementation/
+
 Compléter ce code avec une fonctionnalité de création de `TodoItem`  persisté en base et appelé depuis un endpoint REST `POST /todos` qui :
 
 * prend un `TodoItem` au format JSON dans le body (voir exemple de contenu plus haut);
 * renvoie un code `201` en cas de succès. 
+
+Dans le TodeItemPersistanceAdapter nous avons fait le port out en reprenant la fonction de l'exercice 1 : 
+  @PostMapping("/todos")
+      @ResponseStatus(code = HttpStatus.CREATED)
+      public void createTodoItem(@RequestBody TodoItemJpaEntity TodoItemJpaEntity) {
+          this.todoItemRepository.save(TodoItemJpaEntity);
+      }
+En modifiant juste les paramètres. 
+
+Ensuite, il a fallu mettre en place le port in. Le port in est une interface. Il a fallu alors créer un nouveau fichier pour le prendre en charge. 
+Ce nouveau fichier se nomme "AddTodoItem", il se trouve dans le dossier "application port in". 
+
+Il n'aime pas avec 2 class dans un fichier. 
+Donc pour implémenter le service use-case. Il a fallu créer un autre fichier que nous avons nommé "AddTodoItemService" car nous n'avons pas pu le mettre dans "GetTodoItemsService" 
+
+Nous avons rencontré le problème suivant lors de l'execution du programme.
+Nous avons une erreur quand nous exécutons Insomnia, cette erreur indique que notre AddTodoItem est null. 
+C'est l'objet addTodoItem instancié dans la classe TodoListController qui est détecté comme null. 
+Nous avons remarqué que dans la classe TodoListController, nous n'injections pas le addTodoItem. 
+De même nous avons l'erreur pour l'objet UpdateTodoItem nous avons donc rajouté dans la classe AddTodoItemService dans la méthode AddTodoItemService la ligne : this.updateTodoItem = updateTodoItem. Cette ligne permet de donner une valeur à notre objet. Ainsi il n'est pas null. 
+
 
 La fonctionnalité à implémenter est contractualisée par le port d'entrée `AddTodoItem`.
 
@@ -106,11 +158,16 @@ _Temps estimé : 20 mins_
 
 * Rester sur le même code que l'exercice 2
 
-* Implémenter (en junit) des TU sur la règle de gestion qui consiste à afficher `[LATE!]` dans la description d'un item en retard de plus de 24h.
+* Implémenter (en J unit) des TU sur la règle de gestion qui consiste à afficher `[LATE!]` dans la description d'un item en retard de plus de 24h.
 
 *Quels types de tests devra-t-on écrire pour les adapteurs ?* 
 
+- Un test pour vérifier si un item a été créé dans les dernières 20 minutes
+- Un test pour vérifier qu'un item a été créer depuis plus de 20 minutes.
+
 *Que teste-on dans ce cas ?*
+
+On test si le système est réactif
 
 *S'il vous reste du temps, écrire quelques uns de ces types de test.*
 
